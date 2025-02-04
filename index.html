@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
-		<title>Adapt</title>
+		<title>Adaptive Quiz</title>
 		<style>
 html, body, #canvas {
 	margin: 0;
@@ -75,10 +75,21 @@ body {
 	text-align: center;
 	z-index: 1;
 }
+      /* Styling for the login container */
+#login-container {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 100;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 10px;
+        border-radius: 5px;
+}			
 		</style>
 		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
-
+<!-- Include Google Identity Services Library -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 	</head>
 	<body>
 		<canvas id="canvas">
@@ -94,6 +105,18 @@ body {
 			<progress id="status-progress"></progress>
 			<div id="status-notice"></div>
 		</div>
+    <!-- Login container (visible before game start) -->
+    <div id="login-container">
+      <div id="g_id_onload"
+           data-client_id="294482887266-a801ub2fml6usudbh1qvddf1f576r0jc.apps.googleusercontent.com"
+           data-context="signin"
+           data-ux_mode="popup"
+           data-callback="handleCredentialResponse"
+           data-auto_prompt="false">
+      </div>
+      <div class="g_id_signin" data-type="standard"></div>
+    </div>
+		
 		<script src="coi-serviceworker.js"></script>
 		<script>
 		if ('serviceWorker' in navigator) {
@@ -107,6 +130,47 @@ body {
 		} else {
 			console.warn('Service workers not supported in this browser.');
 		}
+
+      // Callback function for Google OAuth sign-in
+      function handleCredentialResponse(response) {
+        console.log('OAuth response received:', response.credential);
+        // Send the ID token to the backend for verification
+        fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/verify-token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id_token: response.credential })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            console.log('Authentication successful:', data);
+            // Store the verified email in localStorage
+            localStorage.setItem("user_email", data.email);
+            // Optionally, log the login to another endpoint
+            logLogin(data.email);
+            // Hide the login container so the game can start
+            document.getElementById("login-container").style.display = "none";
+          } else {
+            alert('Authentication failed');
+          }
+        })
+        .catch(error => {
+          console.error('Error verifying token:', error);
+        });
+      }
+      
+      // Function to log the login event to the backend
+      function logLogin(email) {
+        fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/log_login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email })
+        })
+        .then(res => res.json())
+        .then(data => console.log("Login logged:", data))
+        .catch(error => console.error("Error logging login:", error));
+      }
+			
 		</script>
 		<script src="index.js"></script>
 		<script>
