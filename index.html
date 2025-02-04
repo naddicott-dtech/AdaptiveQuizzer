@@ -148,8 +148,8 @@ body {
             localStorage.setItem("user_email", data.email);
             // Optionally, log the login to another endpoint
             logLogin(data.email);
-            // Hide the login container so the game can start
-            document.getElementById("login-container").style.display = "none";
+	    // Delay hiding to let the popup complete its messaging
+	    setTimeout(function() { document.getElementById("login-container").style.display = "none";}, 1000); // 1 second delay
           } else {
             alert('Authentication failed');
           }
