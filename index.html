@@ -95,6 +95,19 @@ body {
 			<div id="status-notice"></div>
 		</div>
 		<script src="coi-serviceworker.js"></script>
+		<script>
+		if ('serviceWorker' in navigator) {
+			navigator.serviceWorker.register('coi-serviceworker.js')
+			.then(function(registration) {
+				console.log('Service worker registered with scope:', registration.scope);
+			})
+			.catch(function(error) {
+				console.error('Service worker registration failed:', error);
+			});
+		} else {
+			console.warn('Service workers not supported in this browser.');
+		}
+		</script>
 		<script src="index.js"></script>
 		<script>
 const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":true,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":8112,"index.wasm":43016933},"focusCanvas":true,"gdextensionLibs":[]};
