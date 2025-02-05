@@ -97,7 +97,7 @@
         .then(res => res.json())
         .then(data => {
           if (data.success) {
-            localstorage.setItem("user_email", data.email);
+            localStorage.setItem("user_email", data.email);
             logLogin(data.email);
             // Hide the login UI immediately or after a brief timeout if desired
             document.getElementById("login-container").style.display = "none";
@@ -129,17 +129,17 @@
     <script>
       const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":8112,"index.wasm":43016933},"focusCanvas":true,"gdextensionLibs":[]};
       const GODOT_THREADS_ENABLED = false;
-
+    
       function startGodotGame(){
         const engine = new Engine(GODOT_CONFIG);
-        
+    
         (function () {
           const statusOverlay = document.getElementById('status');
           const statusProgress = document.getElementById('status-progress');
           const statusNotice = document.getElementById('status-notice');
           let initializing = true;
           let statusMode = '';
-  
+    
           function setStatusMode(mode) {
             if (statusMode === mode || !initializing) return;
             if (mode === 'hidden') {
@@ -152,7 +152,7 @@
             statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
             statusMode = mode;
           }
-  
+    
           function setStatusNotice(text) {
             while (statusNotice.lastChild) {
               statusNotice.removeChild(statusNotice.lastChild);
@@ -163,7 +163,7 @@
               statusNotice.appendChild(document.createElement('br'));
             });
           }
-  
+    
           function displayFailureNotice(err) {
             console.error(err);
             if (err instanceof Error) {
@@ -176,7 +176,7 @@
             setStatusMode('notice');
             initializing = false;
           }
-  
+    
           const missing = Engine.getMissingFeatures({ threads: GODOT_THREADS_ENABLED });
           if (missing.length !== 0) {
             const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
@@ -197,8 +197,8 @@
               setStatusMode('hidden');
             }, displayFailureNotice);
           }
-        }
-      }());
+        })();
+      }
     </script>
   </body>
 </html>
