@@ -1,21 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0" />
     <title>Adaptive Quiz</title>
     <style>
-      /* Your existing CSS */
-      html, body, #canvas { margin: 0; padding: 0; border: 0; }
-      body { color: white; background-color: black; overflow: hidden; touch-action: none; }
-      #canvas { display: block; }
-      #canvas:focus { outline: none; }
-      #status, #status-splash, #status-progress { position: absolute; left: 0; right: 0; }
-      #status, #status-splash { top: 0; bottom: 0; }
-      #status { background-color: #242424; display: flex; flex-direction: column; justify-content: center; align-items: center; visibility: hidden; }
-      #status-splash { max-height: 100%; max-width: 100%; margin: auto; }
-      #status-progress, #status-notice { display: none; }
-      #status-progress { bottom: 10%; width: 50%; margin: 0 auto; }
+      /* Basic styling for the canvas/game */
+      html, body, #canvas {
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+      body {
+        color: white;
+        background-color: black;
+        overflow: hidden; /* Can hide the sign-in container if it extends beyond the body area. */
+        touch-action: none;
+      }
+      #canvas {
+        display: block;
+      }
+      #canvas:focus {
+        outline: none;
+      }
+      /* Godot loading overlay */
+      #status,
+      #status-splash,
+      #status-progress {
+        position: absolute;
+        left: 0;
+        right: 0;
+      }
+      #status,
+      #status-splash {
+        top: 0;
+        bottom: 0;
+      }
+      #status {
+        background-color: #242424;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        visibility: hidden;
+      }
+      #status-splash {
+        max-height: 100%;
+        max-width: 100%;
+        margin: auto;
+      }
+      #status-progress,
+      #status-notice {
+        display: none;
+      }
+      #status-progress {
+        bottom: 10%;
+        width: 50%;
+        margin: 0 auto;
+      }
       #status-notice {
         background-color: #5b3943;
         border-radius: 0.5rem;
@@ -41,23 +83,29 @@
       }
     </style>
     <link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
-    <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
-    <!-- Include Google Identity Services Library (only once) -->
+    <link rel="apple-touch-icon" href="index.apple-touch-icon.png" />
+    
+    <!-- Include Google Identity Services Library -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
+    <!-- The Godot canvas -->
     <canvas id="canvas">Your browser does not support the canvas tag.</canvas>
     <noscript>Your browser does not support JavaScript.</noscript>
+
+    <!-- Godot loading status overlay -->
     <div id="status">
-      <img id="status-splash" src="index.png" alt="">
+      <img id="status-splash" src="index.png" alt="" />
       <progress id="status-progress"></progress>
       <div id="status-notice"></div>
     </div>
-    <!-- Login container -->
+
+    <!-- Login container / Google Sign-In button placeholder -->
     <div id="login-container">
       <div id="google-signin-button"></div>
     </div>
-    
+
+    <!-- Service Worker for cross-origin isolation (if needed) -->
     <script src="coi-serviceworker.js"></script>
     <script>
       if ('serviceWorker' in navigator) {
@@ -71,8 +119,10 @@
       } else {
         console.warn('Service workers not supported in this browser.');
       }
-      
-      // Programmatically initialize Google Identity Services after DOM load
+
+      // ------------------------------------------------------------
+      //   Google Sign-In - Manual Initialization
+      // ------------------------------------------------------------
       document.addEventListener('DOMContentLoaded', function() {
         google.accounts.id.initialize({
           client_id: "294482887266-a801ub2fml6usudbh1qvddf1f576r0jc.apps.googleusercontent.com",
@@ -85,16 +135,19 @@
         );
       });
 
-
+      // Commented out fallback timer so that game won't load if login fails
+      /*
       let authTimeout = setTimeout(function() {
-        console.warn("No OAuth response received; proceeding with fallback login.");
-        // Optionally, start game in guest mode or prompt again
+        console.warn("No OAuth response received; proceeding without login.");
         startGodotGame();
-      }, 15000); // 15 seconds timeout
-        
-      // OAuth callback function with additional logging
+      }, 15000); // e.g., 15 seconds
+      */
+
+      // OAuth callback
       function handleCredentialResponse(response) {
-        clearTimeout(authTimeout);
+        // If we had set a timeout, clear it
+        // clearTimeout(authTimeout); // commented out fallback
+
         if (response && response.credential) {
           console.log('OAuth response received:', response.credential);
           fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/verify-token', {
@@ -105,14 +158,16 @@
           .then(res => res.json())
           .then(data => {
             if (data.success) {
+              console.log('Login successful for:', data.email);
               localStorage.setItem("user_email", data.email);
               logLogin(data.email);
-              // Hide the login UI immediately or after a brief timeout if desired
+              // Hide the login UI
               document.getElementById("login-container").style.display = "none";
-              // Now start the Godot game only after successful login
+              // Start the Godot game AFTER successful login
               startGodotGame();
             } else {
-              alert('Authentication failed');
+              console.error('Authentication failed:', data);
+              alert('Authentication failed. The game will not load.');
             }
           })
           .catch(error => {
@@ -123,9 +178,7 @@
         }
       }
 
-
-      
-      // Function to log login event
+      // Log login event to your backend (optional)
       function logLogin(email) {
         fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/log_login', {
           method: 'POST',
@@ -136,23 +189,32 @@
         .then(data => console.log("Login logged:", data))
         .catch(error => console.error("Error logging login:", error));
       }
-    </script>
-    
-    <script src="index.js"></script>
-    <script>
-      const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":8112,"index.wasm":43016933},"focusCanvas":true,"gdextensionLibs":[]};
-      const GODOT_THREADS_ENABLED = false;
-    
-      function startGodotGame(){
+
+      // ------------------------------------------------------------
+      //  Godot engine initialization
+      // ------------------------------------------------------------
+      function startGodotGame() {
+        // Load Godot engine config
+        const GODOT_CONFIG = {
+          "args": [],
+          "canvasResizePolicy": 2,
+          "ensureCrossOriginIsolationHeaders": false,
+          "executable": "index",
+          "experimentalVK": false,
+          "fileSizes": { "index.pck": 8112, "index.wasm": 43016933 },
+          "focusCanvas": true,
+          "gdextensionLibs": []
+        };
+        const GODOT_THREADS_ENABLED = false;
         const engine = new Engine(GODOT_CONFIG);
-    
+
         (function () {
           const statusOverlay = document.getElementById('status');
           const statusProgress = document.getElementById('status-progress');
           const statusNotice = document.getElementById('status-notice');
           let initializing = true;
           let statusMode = '';
-    
+
           function setStatusMode(mode) {
             if (statusMode === mode || !initializing) return;
             if (mode === 'hidden') {
@@ -165,7 +227,7 @@
             statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
             statusMode = mode;
           }
-    
+
           function setStatusNotice(text) {
             while (statusNotice.lastChild) {
               statusNotice.removeChild(statusNotice.lastChild);
@@ -176,7 +238,7 @@
               statusNotice.appendChild(document.createElement('br'));
             });
           }
-    
+
           function displayFailureNotice(err) {
             console.error(err);
             if (err instanceof Error) {
@@ -189,7 +251,7 @@
             setStatusMode('notice');
             initializing = false;
           }
-    
+
           const missing = Engine.getMissingFeatures({ threads: GODOT_THREADS_ENABLED });
           if (missing.length !== 0) {
             const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
@@ -197,7 +259,7 @@
           } else {
             setStatusMode('progress');
             engine.startGame({
-              'onProgress': function (current, total) {
+              onProgress: function (current, total) {
                 if (current > 0 && total > 0) {
                   statusProgress.value = current;
                   statusProgress.max = total;
@@ -213,5 +275,8 @@
         })();
       }
     </script>
+
+    <!-- Godot's core engine JS, must match "executable" name in config -->
+    <script src="index.js"></script>
   </body>
 </html>
