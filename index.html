@@ -1,69 +1,51 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Test Google Sign-In</title>
   <!-- Load the Google Identity Services library -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-  <!-- This div instructs the GIS library to auto-initialize with your settings -->
   <div id="g_id_onload"
        data-client_id="294482887266-a801ub2fml6usudbh1qvddf1f576r0jc.apps.googleusercontent.com"
        data-callback="handleCredentialResponse"
        data-auto_prompt="false">
   </div>
-  <!-- This div tells the GIS library where to render the Google-branded sign-in button -->
   <div class="g_id_signin" data-type="standard"></div>
 
-  <!-- A simple area to show login status -->
-  <p id="status" style="color: green; font-weight: bold;"></p>
+  <p id="status" style="font-weight:bold;color:green;"></p>
 
   <script>
-    // The callback that is invoked when the user successfully signs in.
+    // Minimal, corrected callback
     function handleCredentialResponse(response) {
       console.log("Callback fired at all?");
-      try {
-        console.log("Credential received:", response.credential);
-  
-        // POST the credential to your backend for verification
-        fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/verify-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id_token: response.credential })
-        })
-        .then(res => res.json())
-        .then(data => {
-          console.log('Backend response:', data);
-          if (data.success) {
-            document.getElementById('status').textContent = `Logged in as ${data.email}`;
-            // Optionally hide the sign-in button or redirect to a protected page:
-            document.getElementById('g_id_onload').style.display = 'none';
-            document.querySelector('.g_id_signin').style.display = 'none';
-  
-            // If you want to call log_login or any other endpoint:
-            /*
-            fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/log_login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: data.email })
-            })
-            .then(logRes => logRes.json())
-            .then(logData => console.log('Login log response:', logData));
-            */
-          } else {
-            document.getElementById('status').textContent = 'Authentication failed!';
-            document.getElementById('status').style.color = 'red';
-          }
-        } catch(e) {
-          console.error("Error in handleCredentialResponse: ", e);
+      console.log("Credential received:", response.credential);
+
+      // POST the credential to your backend for verification
+      fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/verify-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_token: response.credential })
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log("Backend response:", data);
+        if (data.success) {
+          document.getElementById("status").textContent = `Logged in as ${data.email}`;
+          // Hide the sign-in UI
+          document.getElementById("g_id_onload").style.display = "none";
+          document.querySelector(".g_id_signin").style.display = "none";
+        } else {
+          document.getElementById("status").textContent = "Authentication failed!";
+          document.getElementById("status").style.color = "red";
         }
       })
       .catch(error => {
-        console.error('Error verifying token:', error);
-        document.getElementById('status').textContent = 'Error verifying token!';
-        document.getElementById('status').style.color = 'red';
+        console.error("Error verifying token:", error);
+        document.getElementById("status").textContent = "Error verifying token!";
+        document.getElementById("status").style.color = "red";
       });
     }
   </script>
