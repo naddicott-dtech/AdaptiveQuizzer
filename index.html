@@ -14,7 +14,8 @@
     body {
       color: white;
       background-color: black;
-      overflow: hidden; /* hides scrollbars; can obscure large absolutely positioned elements */
+      /* Could hide or complicate the sign-in UI if it overflows the screen */
+      overflow: hidden;
       touch-action: none;
     }
     #canvas {
@@ -23,6 +24,7 @@
     #canvas:focus {
       outline: none;
     }
+
     /* Godot loading overlay */
     #status, #status-splash, #status-progress {
       position: absolute;
@@ -39,7 +41,7 @@
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      visibility: hidden;
+      visibility: hidden; /* invisible by default, shown during game load */
     }
     #status-splash {
       max-height: 100%;
@@ -67,21 +69,16 @@
       text-align: center;
       z-index: 1;
     }
-
-    /* OPTIONAL: Hide the canvas until login is successful, if you like
-       #canvas {
-         display: none;
-       }
-    */
   </style>
   <link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
   <link rel="apple-touch-icon" href="index.apple-touch-icon.png" />
 
-  <!-- Google Identity Services library (auto-init approach) -->
+  <!-- Google Identity Services library - auto-render approach -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
+
 <body>
-  <!-- Godot canvas -->
+  <!-- The Godot canvas -->
   <canvas id="canvas">Your browser does not support the canvas tag.</canvas>
   <noscript>Your browser does not support JavaScript.</noscript>
 
@@ -92,7 +89,7 @@
     <div id="status-notice"></div>
   </div>
 
-  <!-- ============= GOOGLE SIGN-IN AUTO-RENDER ============= -->
+  <!-- AUTO-INIT Google Sign-In button -->
   <div id="g_id_onload"
        data-client_id="294482887266-a801ub2fml6usudbh1qvddf1f576r0jc.apps.googleusercontent.com"
        data-callback="handleCredentialResponse"
@@ -101,50 +98,68 @@
   <div class="g_id_signin" data-type="standard"></div>
 
   <script>
-    // Called by Google Identity Services after user chooses an account
+    let gameAlreadyLoaded = false; // Ensure we don't re-load the game on repeated sign-ins
+
     async function handleCredentialResponse(response) {
-      const idToken = response.credential;
-      if (!idToken) {
-        console.error("No credential found in the response");
-        alert("Login failed: No token received. The game will not load.");
+      // If somehow this fires with no credential, bail out
+      if (!response || !response.credential) {
+        console.error("No credential received from Google");
+        alert("Authentication failed. The game will not load.");
         return;
       }
+      console.log("Credential received:", response.credential);
 
-      console.log("Credential received:", idToken);
       try {
-        // Verify token on your backend
-        const res = await fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/verify-token', {
+        // Attempt to verify the token on your backend
+        const verifyRes = await fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/verify-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id_token: idToken })
+          body: JSON.stringify({ id_token: response.credential })
         });
-        const data = await res.json();
+        const data = await verifyRes.json();
         console.log("Backend response:", data);
 
-        if (data.success) {
-          console.log("Login successful for:", data.email);
-          // OPTIONAL: store the user email locally
-          localStorage.setItem("user_email", data.email);
-
-          // If you want to log the login on the backend:
-          await logLogin(data.email);
-
-          // (1) Register the service worker only after login is confirmed
-          await registerServiceWorker();
-
-          // (2) Now start the Godot game
-          startGodotGame();
-        } else {
-          alert("Authentication failed: " + (data.error || "No details provided"));
-          console.error("Login failed, game not started.");
+        if (!data.success) {
+          console.error("Authentication failed response:", data);
+          alert("Authentication failed: The game will not load.");
+          return;
         }
+
+        console.log("Login successful for:", data.email);
+
+        // Optionally store email locally
+        localStorage.setItem("user_email", data.email);
+
+        // Log the login event
+        await logLogin(data.email);
+
+        // Register the service worker only after login to reduce cross-origin issues
+        await registerServiceWorker();
+
+        // If the game is already loaded (this callback somehow fired twice), skip
+        if (gameAlreadyLoaded) {
+          console.log("Game already loaded, ignoring second sign-in");
+          return;
+        }
+
+        // Mark that we've started the game
+        gameAlreadyLoaded = true;
+
+        // Now load the Godot game
+        startGodotGame();
+
+        // If desired, hide the Google sign-in UI
+        const onloadDiv = document.getElementById("g_id_onload");
+        const signinDiv = document.querySelector(".g_id_signin");
+        if (onloadDiv) onloadDiv.style.display = "none";
+        if (signinDiv) signinDiv.style.display = "none";
+
       } catch (err) {
         console.error("Error verifying token:", err);
         alert("Error verifying token. The game will not load.");
       }
     }
 
-    // Log login event (optional)
     async function logLogin(email) {
       try {
         const res = await fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/log_login', {
@@ -159,10 +174,11 @@
       }
     }
 
-    // Register the service worker once user is authenticated
     async function registerServiceWorker() {
+      // If cross-origin isolation is needed for Godot (or certain features), you might keep this
+      // Otherwise, removing the service worker can reduce COOP/COEP postMessage errors
       if (!("serviceWorker" in navigator)) {
-        console.warn("Service workers not supported in this browser.");
+        console.warn("Service workers not supported.");
         return;
       }
       try {
@@ -173,48 +189,56 @@
       }
     }
 
-    // ===== Godot engine initialization (unchanged) =====
+    // ================= Godot engine initialization ================= //
     function startGodotGame() {
-      // Engine config
       const GODOT_CONFIG = {
-        "args": [],
-        "canvasResizePolicy": 2,
-        "ensureCrossOriginIsolationHeaders": false,
-        "executable": "index",
-        "experimentalVK": false,
-        "fileSizes": { "index.pck": 8112, "index.wasm": 43016933 },
-        "focusCanvas": true,
-        "gdextensionLibs": []
+        args: [],
+        canvasResizePolicy: 2,
+        ensureCrossOriginIsolationHeaders: false,
+        executable: "index",
+        experimentalVK: false,
+        fileSizes: { "index.pck": 8112, "index.wasm": 43016933 },
+        focusCanvas: true,
+        gdextensionLibs: []
       };
       const GODOT_THREADS_ENABLED = false;
+
       const engine = new Engine(GODOT_CONFIG);
 
       (function () {
+        // Get references to status overlay elements. They might be null if removed.
         const statusOverlay = document.getElementById("status");
         const statusProgress = document.getElementById("status-progress");
         const statusNotice = document.getElementById("status-notice");
+
         let initializing = true;
         let statusMode = "";
 
         function setStatusMode(mode) {
+          // If any reference is null, skip
+          if (!statusOverlay || !statusProgress || !statusNotice) {
+            console.warn("Status overlay elements are missing, skipping overlay updates.");
+            return;
+          }
           if (statusMode === mode || !initializing) return;
           if (mode === "hidden") {
-            statusOverlay.remove();
+            statusOverlay.remove(); // remove the entire overlay
             initializing = false;
             return;
           }
           statusOverlay.style.visibility = "visible";
-          statusProgress.style.display = mode === "progress" ? "block" : "none";
-          statusNotice.style.display = mode === "notice" ? "block" : "none";
+          statusProgress.style.display = (mode === "progress") ? "block" : "none";
+          statusNotice.style.display = (mode === "notice") ? "block" : "none";
           statusMode = mode;
         }
 
         function setStatusNotice(text) {
+          if (!statusNotice) return;
           while (statusNotice.lastChild) {
             statusNotice.removeChild(statusNotice.lastChild);
           }
           const lines = text.split("\n");
-          lines.forEach((line) => {
+          lines.forEach(line => {
             statusNotice.appendChild(document.createTextNode(line));
             statusNotice.appendChild(document.createElement("br"));
           });
@@ -222,6 +246,7 @@
 
         function displayFailureNotice(err) {
           console.error(err);
+          if (!statusNotice) return;
           if (err instanceof Error) {
             setStatusNotice(err.message);
           } else if (typeof err === "string") {
@@ -233,31 +258,35 @@
           initializing = false;
         }
 
+        // Check for missing features
         const missing = Engine.getMissingFeatures({ threads: GODOT_THREADS_ENABLED });
         if (missing.length !== 0) {
           const missingMsg = "Error\nThe following features required to run Godot projects on the Web are missing:\n";
           displayFailureNotice(missingMsg + missing.join("\n"));
-        } else {
-          setStatusMode("progress");
-          engine.startGame({
-            onProgress: function (current, total) {
-              if (current > 0 && total > 0) {
-                statusProgress.value = current;
-                statusProgress.max = total;
-              } else {
-                statusProgress.removeAttribute("value");
-                statusProgress.removeAttribute("max");
-              }
-            }
-          }).then(() => {
-            setStatusMode("hidden");
-          }, displayFailureNotice);
+          return;
         }
+
+        // Start game
+        setStatusMode("progress");
+        engine.startGame({
+          onProgress: function (current, total) {
+            if (!statusProgress) return;
+            if (current > 0 && total > 0) {
+              statusProgress.value = current;
+              statusProgress.max = total;
+            } else {
+              statusProgress.removeAttribute("value");
+              statusProgress.removeAttribute("max");
+            }
+          }
+        }).then(() => {
+          setStatusMode("hidden");
+        }, displayFailureNotice);
       })();
     }
   </script>
 
-  <!-- The Godot engine code must match 'executable' name in GODOT_CONFIG -->
+  <!-- Godot engine JS; must match "executable" in GODOT_CONFIG -->
   <script src="index.js"></script>
 </body>
 </html>
