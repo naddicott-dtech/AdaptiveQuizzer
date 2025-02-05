@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+  <title>Test Google Sign-In</title>
+  <!-- Load the Google Identity Services library -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div id="g_id_onload"
+       data-client_id="294482887266-a801ub2fml6usudbh1qvddf1f576r0jc.apps.googleusercontent.com"
+       data-callback="handleCredentialResponse"
+       data-auto_prompt="false">
+  </div>
+  <div class="g_id_signin" data-type="standard"></div>
+
+  <p id="status" style="font-weight:bold;color:green;"></p>
+
+  <script>
+    // 1) Make sure this function name matches data-callback in the <div>.
+    function handleCredentialResponse(response) {
+      console.log("Callback fired at all?");
+      console.log("Credential received:", response.credential);
+
+      // 2) POST the credential to your backend for verification:
+      fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/verify-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_token: response.credential })
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log("Backend response:", data);
+        if (data.success) {
+          document.getElementById("status").textContent = `Logged in as ${data.email}`;
+          // Hide the sign-in UI if you want:
+          document.getElementById("g_id_onload").style.display = "none";
+          document.querySelector(".g_id_signin").style.display = "none";
+        } else {
+          document.getElementById("status").textContent = "Authentication failed!";
+          document.getElementById("status").style.color = "red";
+        }
+      })
+      .catch(error => {
+        console.error("Error verifying token:", error);
+        document.getElementById("status").textContent = "Error verifying token!";
+        document.getElementById("status").style.color = "red";
+      });
+    }
+  </script>
+</body>
+</html>
