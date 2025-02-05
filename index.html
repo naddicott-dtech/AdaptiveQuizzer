@@ -88,6 +88,65 @@ body {
 		</style>
 		<link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
+<!-- google stuff -->
+<script>
+  window.onload = function() {
+    // Initialize Google Identity Services
+    google.accounts.id.initialize({
+      client_id: "294482887266-a801ub2fml6usudbh1qvddf1f576r0jc.apps.googleusercontent.com",
+      callback: handleCredentialResponse,
+      ux_mode: "popup"
+    });
+    // Render the sign-in button in the designated container
+    google.accounts.id.renderButton(
+      document.getElementById("google-signin-button"),
+      { theme: "outline", size: "large" }  // Customize appearance as desired
+    );
+  };
+
+  // Callback function for successful sign-in (this remains as you already have it)
+  function handleCredentialResponse(response) {
+    console.log('OAuth response received:', response.credential);
+    // Send the ID token to your backend for verification
+    fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/verify-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id_token: response.credential })
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) {
+        console.log('Authentication successful:', data);
+        // Store the verified email in localStorage
+        localStorage.setItem("user_email", data.email);
+        // Optionally, log the login to your backend
+        logLogin(data.email);
+        // Delay hiding the login container to let the popup finish its messaging
+        setTimeout(function() { 
+          document.getElementById("login-container").style.display = "none";
+        }, 1000);
+      } else {
+        alert('Authentication failed');
+      }
+    })
+    .catch(error => {
+      console.error('Error verifying token:', error);
+    });
+  }
+  
+  // Function to log the login event to the backend
+  function logLogin(email) {
+    fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/log_login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email })
+    })
+    .then(res => res.json())
+    .then(data => console.log("Login logged:", data))
+    .catch(error => console.error("Error logging login:", error));
+  }
+</script>
+
 <!-- Include Google Identity Services Library -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 	</head>
@@ -107,14 +166,7 @@ body {
 		</div>
     <!-- Login container (visible before game start) -->
     <div id="login-container">
-      <div id="g_id_onload"
-           data-client_id="294482887266-a801ub2fml6usudbh1qvddf1f576r0jc.apps.googleusercontent.com"
-           data-context="signin"
-           data-ux_mode="popup"
-           data-callback="handleCredentialResponse"
-           data-auto_prompt="false">
-      </div>
-      <div class="g_id_signin" data-type="standard"></div>
+      <div id="google-signin-button"></div>
     </div>
 		
 		<script src="coi-serviceworker.js"></script>
