@@ -8,20 +8,20 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
-  <!-- The GIS library will automatically initialize using these attributes -->
+  <!-- This div instructs the GIS library to auto-initialize with your settings -->
   <div id="g_id_onload"
        data-client_id="294482887266-a801ub2fml6usudbh1qvddf1f576r0jc.apps.googleusercontent.com"
        data-callback="handleCredentialResponse"
        data-auto_prompt="false">
   </div>
-  <!-- This element will be replaced by the Google sign-in button -->
+  <!-- This div tells the GIS library where to render the Google-branded sign-in button -->
   <div class="g_id_signin" data-type="standard"></div>
 
   <script>
-    // Callback function that receives the credential response from Google
+    // The callback that is invoked when the user successfully signs in.
     function handleCredentialResponse(response) {
-      console.log("Google Credential Response:", response);
-      // response.credential contains the JWT that you can decode and send to your backend if needed
+      console.log("Credential received:", response);
+      // You can decode response.credential (a JWT) and use it as needed.
     }
   </script>
 </body>
