@@ -96,14 +96,13 @@
         })
         .then(res => res.json())
         .then(data => {
-          console.log('Data received from /verify-token:', data);
           if (data.success) {
-            console.log('Authentication successful:', data);
-            localStorage.setItem("user_email", data.email);
+            localstorage.setItem("user_email", data.email);
             logLogin(data.email);
-            setTimeout(function() { 
-              document.getElementById("login-container").style.display = "none";
-            }, 1000);
+            // Hide the login UI immediately or after a brief timeout if desired
+            document.getElementById("login-container").style.display = "none";
+            // Now start the Godot game only after successful login
+            startGodotGame();
           } else {
             alert('Authentication failed');
           }
@@ -130,71 +129,74 @@
     <script>
       const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":8112,"index.wasm":43016933},"focusCanvas":true,"gdextensionLibs":[]};
       const GODOT_THREADS_ENABLED = false;
-      const engine = new Engine(GODOT_CONFIG);
-      
-      (function () {
-        const statusOverlay = document.getElementById('status');
-        const statusProgress = document.getElementById('status-progress');
-        const statusNotice = document.getElementById('status-notice');
-        let initializing = true;
-        let statusMode = '';
 
-        function setStatusMode(mode) {
-          if (statusMode === mode || !initializing) return;
-          if (mode === 'hidden') {
-            statusOverlay.remove();
+      function startGodotGame(){
+        const engine = new Engine(GODOT_CONFIG);
+        
+        (function () {
+          const statusOverlay = document.getElementById('status');
+          const statusProgress = document.getElementById('status-progress');
+          const statusNotice = document.getElementById('status-notice');
+          let initializing = true;
+          let statusMode = '';
+  
+          function setStatusMode(mode) {
+            if (statusMode === mode || !initializing) return;
+            if (mode === 'hidden') {
+              statusOverlay.remove();
+              initializing = false;
+              return;
+            }
+            statusOverlay.style.visibility = 'visible';
+            statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
+            statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
+            statusMode = mode;
+          }
+  
+          function setStatusNotice(text) {
+            while (statusNotice.lastChild) {
+              statusNotice.removeChild(statusNotice.lastChild);
+            }
+            const lines = text.split('\n');
+            lines.forEach((line) => {
+              statusNotice.appendChild(document.createTextNode(line));
+              statusNotice.appendChild(document.createElement('br'));
+            });
+          }
+  
+          function displayFailureNotice(err) {
+            console.error(err);
+            if (err instanceof Error) {
+              setStatusNotice(err.message);
+            } else if (typeof err === 'string') {
+              setStatusNotice(err);
+            } else {
+              setStatusNotice('An unknown error occurred');
+            }
+            setStatusMode('notice');
             initializing = false;
-            return;
           }
-          statusOverlay.style.visibility = 'visible';
-          statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
-          statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
-          statusMode = mode;
-        }
-
-        function setStatusNotice(text) {
-          while (statusNotice.lastChild) {
-            statusNotice.removeChild(statusNotice.lastChild);
-          }
-          const lines = text.split('\n');
-          lines.forEach((line) => {
-            statusNotice.appendChild(document.createTextNode(line));
-            statusNotice.appendChild(document.createElement('br'));
-          });
-        }
-
-        function displayFailureNotice(err) {
-          console.error(err);
-          if (err instanceof Error) {
-            setStatusNotice(err.message);
-          } else if (typeof err === 'string') {
-            setStatusNotice(err);
+  
+          const missing = Engine.getMissingFeatures({ threads: GODOT_THREADS_ENABLED });
+          if (missing.length !== 0) {
+            const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
+            displayFailureNotice(missingMsg + missing.join('\n'));
           } else {
-            setStatusNotice('An unknown error occurred');
+            setStatusMode('progress');
+            engine.startGame({
+              'onProgress': function (current, total) {
+                if (current > 0 && total > 0) {
+                  statusProgress.value = current;
+                  statusProgress.max = total;
+                } else {
+                  statusProgress.removeAttribute('value');
+                  statusProgress.removeAttribute('max');
+                }
+              },
+            }).then(() => {
+              setStatusMode('hidden');
+            }, displayFailureNotice);
           }
-          setStatusMode('notice');
-          initializing = false;
-        }
-
-        const missing = Engine.getMissingFeatures({ threads: GODOT_THREADS_ENABLED });
-        if (missing.length !== 0) {
-          const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
-          displayFailureNotice(missingMsg + missing.join('\n'));
-        } else {
-          setStatusMode('progress');
-          engine.startGame({
-            'onProgress': function (current, total) {
-              if (current > 0 && total > 0) {
-                statusProgress.value = current;
-                statusProgress.max = total;
-              } else {
-                statusProgress.removeAttribute('value');
-                statusProgress.removeAttribute('max');
-              }
-            },
-          }).then(() => {
-            setStatusMode('hidden');
-          }, displayFailureNotice);
         }
       }());
     </script>
