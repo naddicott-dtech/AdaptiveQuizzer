@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>Test Google Sign-In</title>
   <!-- Load the Google Identity Services library -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -18,12 +18,12 @@
   <p id="status" style="font-weight:bold;color:green;"></p>
 
   <script>
-    // Minimal, corrected callback
+    // 1) Make sure this function name matches data-callback in the <div>.
     function handleCredentialResponse(response) {
       console.log("Callback fired at all?");
       console.log("Credential received:", response.credential);
 
-      // POST the credential to your backend for verification
+      // 2) POST the credential to your backend for verification:
       fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/verify-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -34,7 +34,7 @@
         console.log("Backend response:", data);
         if (data.success) {
           document.getElementById("status").textContent = `Logged in as ${data.email}`;
-          // Hide the sign-in UI
+          // Hide the sign-in UI if you want:
           document.getElementById("g_id_onload").style.display = "none";
           document.querySelector(".g_id_signin").style.display = "none";
         } else {
