@@ -5,54 +5,17 @@
     <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
     <title>Adaptive Quiz</title>
     <style>
-      /* Existing CSS */
-      html, body, #canvas {
-        margin: 0;
-        padding: 0;
-        border: 0;
-      }
-      body {
-        color: white;
-        background-color: black;
-        overflow: hidden;
-        touch-action: none;
-      }
-      #canvas {
-        display: block;
-      }
-      #canvas:focus {
-        outline: none;
-      }
-      #status, #status-splash, #status-progress {
-        position: absolute;
-        left: 0;
-        right: 0;
-      }
-      #status, #status-splash {
-        top: 0;
-        bottom: 0;
-      }
-      #status {
-        background-color: #242424;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        visibility: hidden;
-      }
-      #status-splash {
-        max-height: 100%;
-        max-width: 100%;
-        margin: auto;
-      }
-      #status-progress, #status-notice {
-        display: none;
-      }
-      #status-progress {
-        bottom: 10%;
-        width: 50%;
-        margin: 0 auto;
-      }
+      /* Your existing CSS */
+      html, body, #canvas { margin: 0; padding: 0; border: 0; }
+      body { color: white; background-color: black; overflow: hidden; touch-action: none; }
+      #canvas { display: block; }
+      #canvas:focus { outline: none; }
+      #status, #status-splash, #status-progress { position: absolute; left: 0; right: 0; }
+      #status, #status-splash { top: 0; bottom: 0; }
+      #status { background-color: #242424; display: flex; flex-direction: column; justify-content: center; align-items: center; visibility: hidden; }
+      #status-splash { max-height: 100%; max-width: 100%; margin: auto; }
+      #status-progress, #status-notice { display: none; }
+      #status-progress { bottom: 10%; width: 50%; margin: 0 auto; }
       #status-notice {
         background-color: #5b3943;
         border-radius: 0.5rem;
@@ -79,29 +42,24 @@
     </style>
     <link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
     <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
-    <!-- Include Google Identity Services Library only once -->
+    <!-- Include Google Identity Services Library (only once) -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
-    <canvas id="canvas">
-      Your browser does not support the canvas tag.
-    </canvas>
-    <noscript>
-      Your browser does not support JavaScript.
-    </noscript>
+    <canvas id="canvas">Your browser does not support the canvas tag.</canvas>
+    <noscript>Your browser does not support JavaScript.</noscript>
     <div id="status">
       <img id="status-splash" src="index.png" alt="">
       <progress id="status-progress"></progress>
       <div id="status-notice"></div>
     </div>
-    <!-- Login container (visible before game start) -->
+    <!-- Login container -->
     <div id="login-container">
       <div id="google-signin-button"></div>
     </div>
     
     <script src="coi-serviceworker.js"></script>
     <script>
-      // Register service worker
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('coi-serviceworker.js')
           .then(function(registration) {
@@ -114,7 +72,7 @@
         console.warn('Service workers not supported in this browser.');
       }
       
-      // Programmatic initialization of Google Identity Services
+      // Programmatically initialize Google Identity Services after DOM load
       window.onload = function() {
         google.accounts.id.initialize({
           client_id: "294482887266-a801ub2fml6usudbh1qvddf1f576r0jc.apps.googleusercontent.com",
@@ -127,10 +85,10 @@
         );
       };
       
-      // Callback function for Google OAuth sign-in
+      // OAuth callback function with additional logging
       function handleCredentialResponse(response) {
-        console.log('OAuth response received:', response.credential);
-        // Send the ID token to the backend for verification using POST
+        console.log('Callback triggered. OAuth response received:', response.credential);
+        // Send POST request to verify token
         fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/verify-token', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -138,11 +96,11 @@
         })
         .then(res => res.json())
         .then(data => {
+          console.log('Data received from /verify-token:', data);
           if (data.success) {
             console.log('Authentication successful:', data);
             localStorage.setItem("user_email", data.email);
             logLogin(data.email);
-            // Delay hiding the login container to let the popup finish messaging
             setTimeout(function() { 
               document.getElementById("login-container").style.display = "none";
             }, 1000);
@@ -155,7 +113,7 @@
         });
       }
       
-      // Function to log the login event to the backend
+      // Function to log login event
       function logLogin(email) {
         fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/log_login', {
           method: 'POST',
@@ -168,7 +126,6 @@
       }
     </script>
     
-    <!-- Include Godot engine initialization (unchanged) -->
     <script src="index.js"></script>
     <script>
       const GODOT_CONFIG = {"args":[],"canvasResizePolicy":2,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":false,"fileSizes":{"index.pck":8112,"index.wasm":43016933},"focusCanvas":true,"gdextensionLibs":[]};
