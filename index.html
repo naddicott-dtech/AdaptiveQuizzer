@@ -1,27 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>Test GIS</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-  </head>
-  <body>
-    <div id="google-signin-button"></div>
-    <script>
-      function handleCredentialResponse(response) {
-        console.log("Credential received:", response);
-      }
-      window.onload = function() {
-        google.accounts.id.initialize({
-          client_id: "294482887266-a801ub2fml6usudbh1qvddf1f576r0jc.apps.googleusercontent.com",
-          callback: handleCredentialResponse,
-          ux_mode: "popup"
-        });
-        google.accounts.id.renderButton(
-          document.getElementById("google-signin-button"),
-          { theme: "outline", size: "large" }
-        );
-      }
-    </script>
-  </body>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Google Sign-In</title>
+  <!-- Load the Google Identity Services library -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <!-- The GIS library will automatically initialize using these attributes -->
+  <div id="g_id_onload"
+       data-client_id="294482887266-a801ub2fml6usudbh1qvddf1f576r0jc.apps.googleusercontent.com"
+       data-callback="handleCredentialResponse"
+       data-auto_prompt="false">
+  </div>
+  <!-- This element will be replaced by the Google sign-in button -->
+  <div class="g_id_signin" data-type="standard"></div>
+
+  <script>
+    // Callback function that receives the credential response from Google
+    function handleCredentialResponse(response) {
+      console.log("Google Credential Response:", response);
+      // response.credential contains the JWT that you can decode and send to your backend if needed
+    }
+  </script>
+</body>
 </html>
