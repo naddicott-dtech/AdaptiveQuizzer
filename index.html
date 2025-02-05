@@ -73,55 +73,56 @@
       }
       
       // Programmatically initialize Google Identity Services after DOM load
-      window.onload = function() {
-        document.addEventListener('DOMContentLoaded', function() {
-          google.accounts.id.initialize({
-            client_id: "YOUR_CLIENT_ID",
-            callback: handleCredentialResponse,
-            ux_mode: "popup"
-          });
-          google.accounts.id.renderButton(
-            document.getElementById("google-signin-button"),
-            { theme: "outline", size: "large" }
-          );
+      document.addEventListener('DOMContentLoaded', function() {
+        google.accounts.id.initialize({
+          client_id: "294482887266-a801ub2fml6usudbh1qvddf1f576r0jc.apps.googleusercontent.com",
+          callback: handleCredentialResponse,
+          ux_mode: "popup"
         });
+        google.accounts.id.renderButton(
+          document.getElementById("google-signin-button"),
+          { theme: "outline", size: "large" }
+        );
+      });
 
-    let authTimeout = setTimeout(function() {
-      console.warn("No OAuth response received; proceeding with fallback login.");
-      // Optionally, start game in guest mode or prompt again
-      startGodotGame();
-    }, 15000); // 15 seconds timeout
+
+      let authTimeout = setTimeout(function() {
+        console.warn("No OAuth response received; proceeding with fallback login.");
+        // Optionally, start game in guest mode or prompt again
+        startGodotGame();
+      }, 15000); // 15 seconds timeout
         
       // OAuth callback function with additional logging
-    function handleCredentialResponse(response) {
-      clearTimeout(authTimeout);
-      if (response && response.credential) {
-        console.log('OAuth response received:', response.credential);
-        fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/verify-token', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id_token: response.credential })
-        })
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            localStorage.setItem("user_email", data.email);
-            logLogin(data.email);
-            // Hide the login UI immediately or after a brief timeout if desired
-            document.getElementById("login-container").style.display = "none";
-            // Now start the Godot game only after successful login
-            startGodotGame();
-          } else {
-            alert('Authentication failed');
-          }
+      function handleCredentialResponse(response) {
+        clearTimeout(authTimeout);
+        if (response && response.credential) {
+          console.log('OAuth response received:', response.credential);
+          fetch('https://adaptive-quiz-back-end-nealaddicott.replit.app/verify-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id_token: response.credential })
+          })
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) {
+              localStorage.setItem("user_email", data.email);
+              logLogin(data.email);
+              // Hide the login UI immediately or after a brief timeout if desired
+              document.getElementById("login-container").style.display = "none";
+              // Now start the Godot game only after successful login
+              startGodotGame();
+            } else {
+              alert('Authentication failed');
+            }
+          })
+          .catch(error => {
+            console.error('Error verifying token:', error);
+          });
         } else {
           console.error("OAuth response did not contain a credential");
         }
-      })
-      .catch(error => {
-        console.error('Error verifying token:', error);
-      });
-    }
+      }
+
 
       
       // Function to log login event
